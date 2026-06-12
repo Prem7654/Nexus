@@ -251,6 +251,20 @@
 @keyframes fadeUp{from{opacity:0;transform:translateY(15px)}to{opacity:1;transform:translateY(0)}}
 @keyframes slideIn{from{opacity:0;transform:translateX(40px)}to{opacity:1;transform:translateX(0)}}
 
+
+#refreshCountdown{
+position:fixed;
+bottom:12px;
+right:12px;
+background:#131720;
+border:1px solid #1e2535;
+padding:8px 12px;
+border-radius:10px;
+font-size:12px;
+color:#60a5fa;
+z-index:9999;
+}
+
 </style>
 </head>
 <body>
@@ -279,10 +293,22 @@
   <div class="loading"><div class="spinner"></div>Loading devices...</div>
 </div>
 
+<div id="refreshCountdown">🔄 Refresh in 10s</div>
 <script>
 const FIREBASE_URL = "https://lalannew5-default-rtdb.firebaseio.com/.json";
 let allDevices = [];
 let currentFilter = 'all';
+
+let refreshTimer = 10;
+setInterval(()=>{
+ refreshTimer--;
+ if(refreshTimer<=0){
+   refreshTimer=10;
+ }
+ const el=document.getElementById('refreshCountdown');
+ if(el) el.innerHTML='🔄 Refresh in '+refreshTimer+'s';
+},1000);
+
 let favourites = JSON.parse(localStorage.getItem('favourites')||'[]');
 
 function extractNumber(simStr) {
@@ -483,6 +509,7 @@ function renderDevices() {
 }
 
 loadData();
+setInterval(loadData, 10000);
 </script>
 </body>
 </html>
