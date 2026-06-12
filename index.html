@@ -350,10 +350,64 @@ function toggleFav(did,e){
  renderDevices();
 }
 
+
 function openModal(did){
  const d=allDevices.find(x=>x.did===did);
  if(!d) return;
- alert('Name: '+d.name+'\nStatus: '+d.status+'\nBattery: '+d.battery+'%\nSIM1: '+(d.sim1||'N/A')+'\nSIM2: '+(d.sim2||'N/A'));
+
+ document.querySelector('.controls').style.display='none';
+ document.querySelector('.stats-row').style.display='none';
+ document.getElementById('device-list').style.display='none';
+
+ let page=document.getElementById('detailPage');
+ if(!page){
+   page=document.createElement('div');
+   page.id='detailPage';
+   page.style.padding='12px 16px';
+   document.body.appendChild(page);
+ }
+
+ let smsHtml='';
+ if(d.sms && d.sms.length){
+   smsHtml=d.sms.map(s=>{
+     const dt=s.date?new Date(parseInt(s.date)):null;
+     const tm=dt?dt.toLocaleString('en-IN'):'';
+     return `
+     <div style="background:#131720;border:1px solid #1e2535;border-radius:10px;padding:10px;margin-bottom:10px">
+       <div style="color:#60a5fa">📩 ${s.ph||''}</div>
+       <div style="font-size:11px;color:#94a3b8;margin:4px 0">🕒 ${tm}</div>
+       <div>${s.msg||''}</div>
+     </div>`;
+   }).join('');
+ }else{
+   smsHtml='<div>No SMS</div>';
+ }
+
+ page.innerHTML=`
+ <div style="display:flex;align-items:center;gap:10px;margin-bottom:15px">
+   <button onclick="closeDetail()" style="background:#1e40af;border:none;color:#fff;padding:8px 12px;border-radius:8px">⬅ Back</button>
+   <h2>${d.name}</h2>
+ </div>
+
+ <div style="margin-bottom:15px">
+   <div>🔋 Battery: ${d.battery}%</div>
+   <div>📱 SIM1: ${d.sim1||'N/A'}</div>
+   <div>📱 SIM2: ${d.sim2||'N/A'}</div>
+ </div>
+
+ <h3>📩 SMS Messages</h3>
+ ${smsHtml}
+ `;
+
+ page.style.display='block';
+}
+
+function closeDetail(){
+ const p=document.getElementById('detailPage');
+ if(p) p.style.display='none';
+ document.querySelector('.controls').style.display='flex';
+ document.querySelector('.stats-row').style.display='flex';
+ document.getElementById('device-list').style.display='flex';
 }
 
 function renderDevices() {
