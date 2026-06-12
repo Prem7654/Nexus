@@ -324,6 +324,8 @@ function extractNumber(simStr) {
 }
 
 async function loadData() {
+  const currentScroll = window.scrollY;
+
   document.getElementById('device-list').innerHTML = '<div class="loading"><div class="spinner"></div>Loading devices...</div>';
   try {
     const res = await fetch(FIREBASE_URL);
@@ -358,6 +360,7 @@ async function loadData() {
     document.getElementById('stat-offline').textContent = total - online;
 
     renderDevices();
+    requestAnimationFrame(()=>window.scrollTo(0,currentScroll));
   } catch (e) {
     document.getElementById('device-list').innerHTML = `<div class="empty">❌ Failed to load data.<br>${e.message}</div>`;
   }
