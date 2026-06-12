@@ -241,6 +241,16 @@
     cursor: pointer;
     margin-left: 6px;
   }
+
+.device-card{animation:fadeUp .35s ease;transition:all .25s ease}
+.device-card:hover{transform:translateY(-2px)}
+.device-card:active{transform:scale(.98)}
+.tab,.copy-btn,#refresh-btn,button{transition:.25s}
+.tab:active,.copy-btn:active,#refresh-btn:active,button:active{transform:scale(.95)}
+#detailPage{animation:slideIn .25s ease}
+@keyframes fadeUp{from{opacity:0;transform:translateY(15px)}to{opacity:1;transform:translateY(0)}}
+@keyframes slideIn{from{opacity:0;transform:translateX(40px)}to{opacity:1;transform:translateX(0)}}
+
 </style>
 </head>
 <body>
@@ -390,6 +400,9 @@ function openModal(did){
  </div>
 
  <div style="margin-bottom:15px">
+   <div style="display:inline-block;padding:6px 10px;border-radius:8px;margin-bottom:8px;background:${d.status==='Online'?'#14532d':'#7f1d1d'};color:${d.status==='Online'?'#4ade80':'#f87171'}">
+   ${d.status==='Online'?'🟢 Online':'🔴 Offline'}
+   </div>
    <div>🔋 Battery: ${d.battery}%</div>
    <div>📱 SIM1: ${d.sim1||'N/A'}</div>
    <div>📱 SIM2: ${d.sim2||'N/A'}</div>
