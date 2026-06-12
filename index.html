@@ -255,7 +255,7 @@
   <div class="filter-tabs">
     <div class="tab active" onclick="setFilter('all', this)">All</div>
     <div class="tab" onclick="setFilter('online', this)">🟢 Online</div>
-    <div class="tab" onclick="setFilter('offline', this)">🔴 Offline</div>
+    <div class="tab" onclick="setFilter('offline', this)">🔴 Offline</div><div class="tab" onclick="setFilter('fav', this)">⭐ Fav</div>
   </div>
 </div>
 
@@ -273,6 +273,7 @@
 const FIREBASE_URL = "https://lalannew5-default-rtdb.firebaseio.com/.json";
 let allDevices = [];
 let currentFilter = 'all';
+let favourites = JSON.parse(localStorage.getItem('favourites')||'[]');
 
 function extractNumber(simStr) {
   if (!simStr) return null;
@@ -337,12 +338,31 @@ function copyText(text) {
   navigator.clipboard.writeText(text).catch(() => {});
 }
 
+
+function toggleFav(did,e){
+ if(e) e.stopPropagation();
+ if(favourites.includes(did)){
+   favourites=favourites.filter(x=>x!==did);
+ }else{
+   favourites.push(did);
+ }
+ localStorage.setItem('favourites',JSON.stringify(favourites));
+ renderDevices();
+}
+
+function openModal(did){
+ const d=allDevices.find(x=>x.did===did);
+ if(!d) return;
+ alert('Name: '+d.name+'\nStatus: '+d.status+'\nBattery: '+d.battery+'%\nSIM1: '+(d.sim1||'N/A')+'\nSIM2: '+(d.sim2||'N/A'));
+}
+
 function renderDevices() {
   const query = document.getElementById('search-input').value.toLowerCase().trim();
   let list = allDevices;
 
   if (currentFilter === 'online') list = list.filter(d => d.status === "Online");
   if (currentFilter === 'offline') list = list.filter(d => d.status === "Offline");
+  if (currentFilter === 'fav') list = list.filter(d => favourites.includes(d.did));
 
   if (query) {
     list = list.filter(d => {
@@ -380,7 +400,8 @@ function renderDevices() {
       : '<div class="no-sms">No SMS</div>';
 
     return `
-      <div class="device-card" onclick="openModal(allDevices.findIndex(x=>x.did===\'${d.did}\'))">
+      <div class="device-card" onclick="openModal('${d.did}')">
+<div style="float:right;font-size:20px;cursor:pointer" onclick="toggleFav('${d.did}',event)">${favourites.includes(d.did)?'⭐':'☆'}</div>
         <div class="device-header">
           <span class="dot">${dot}</span>
           <span class="device-name">${d.name}</span>
@@ -394,34 +415,7 @@ function renderDevices() {
   }).join('');
 }
 
-
-function openModal(index){
- const d = allDevices[index];
- if(!d) return;
- document.getElementById('modalName').textContent = d.name;
- document.getElementById('modalContent').innerHTML =
- '<p><b>Status:</b> '+d.status+'</p>'+
- '<p><b>Battery:</b> '+d.battery+'%</p>'+
- '<p><b>DID:</b> '+d.did+'</p>'+
- '<p><b>SIM1:</b> '+(d.sim1||'N/A')+'</p>'+
- '<p><b>SIM2:</b> '+(d.sim2||'N/A')+'</p>';
- document.getElementById('deviceModal').style.display='block';
-}
-function closeModal(){
- document.getElementById('deviceModal').style.display='none';
-}
-
 loadData();
 </script>
-
-<div id="deviceModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.7);z-index:9999;">
-  <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:90%;max-width:400px;background:#131720;border:1px solid #1e2535;border-radius:12px;padding:20px;color:#fff;">
-    <div style="display:flex;justify-content:space-between;align-items:center;">
-      <h3 id="modalName">Device</h3>
-      <button onclick="closeModal()" style="background:none;border:none;color:#fff;font-size:22px;">×</button>
-    </div>
-    <div id="modalContent"></div>
-  </div>
-</div>
 </body>
 </html>
