@@ -334,7 +334,23 @@ function setFilter(filter, el) {
 }
 
 function copyText(text) {
+  event.stopPropagation();
   navigator.clipboard.writeText(text).catch(() => {});
+}
+
+function openModal(device){
+ document.getElementById("modalName").textContent=device.name;
+ document.getElementById("modalContent").innerHTML=`
+ <p><b>Status:</b> ${device.status}</p>
+ <p><b>Battery:</b> ${device.battery}%</p>
+ <p><b>DID:</b> ${device.did}</p>
+ <p><b>SIM1:</b> ${device.sim1 || 'N/A'}</p>
+ <p><b>SIM2:</b> ${device.sim2 || 'N/A'}</p>`;
+ document.getElementById("deviceModal").style.display="block";
+}
+
+function closeModal(){
+ document.getElementById("deviceModal").style.display="none";
 }
 
 function renderDevices() {
@@ -380,7 +396,7 @@ function renderDevices() {
       : '<div class="no-sms">No SMS</div>';
 
     return `
-      <div class="device-card">
+      <div class="device-card" onclick='openModal(${JSON.stringify(d)})'>
         <div class="device-header">
           <span class="dot">${dot}</span>
           <span class="device-name">${d.name}</span>
@@ -396,6 +412,16 @@ function renderDevices() {
 
 loadData();
 </script>
+
+<div id="deviceModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.7);z-index:9999;">
+<div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:90%;max-width:400px;background:#131720;border:1px solid #1e2535;border-radius:12px;padding:20px;color:#fff;">
+<div style="display:flex;justify-content:space-between;align-items:center;">
+<h3 id="modalName">Device</h3>
+<button onclick="closeModal()" style="background:none;border:none;color:#fff;font-size:22px;cursor:pointer;">×</button>
+</div>
+<div id="modalContent"></div>
+</div>
+</div>
+
 </body>
 </html>
-
